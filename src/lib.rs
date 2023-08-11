@@ -123,7 +123,7 @@ fn create_proxied_response<B>(mut response: Response<B>) -> Response<B> {
     response
 }
 
-fn forward_uri<B>(forward_url: &str, req: &Request<B>) -> String {
+fn forward_uri<B>(forward_url: String, req: &Request<B>) -> String {
     debug!("Building forward uri");
 
     let split_url = forward_url.split('?').collect::<Vec<&str>>();
@@ -203,7 +203,7 @@ fn forward_uri<B>(forward_url: &str, req: &Request<B>) -> String {
 
 fn create_proxied_request<B>(
     client_ip: IpAddr,
-    forward_url: &str,
+    forward_url: String,
     mut request: Request<B>,
     upgrade_type: Option<&String>,
 ) -> Result<Request<B>, ProxyError> {
@@ -280,7 +280,7 @@ fn create_proxied_request<B>(
 
 pub async fn call<'a, T: hyper::client::connect::Connect + Clone + Send + Sync + 'static>(
     client_ip: IpAddr,
-    forward_uri: &str,
+    forward_uri: String,
     mut request: Request<Body>,
     client: &'a Client<T>,
 ) -> Result<Response<Body>, ProxyError> {
@@ -353,13 +353,19 @@ impl<T: hyper::client::connect::Connect + Clone + Send + Sync + 'static> Reverse
         Self { client }
     }
 
-    pub async fn call(
+    pub async fn call<E: AsRef<str>>(
         &self,
         client_ip: IpAddr,
-        forward_uri: &str,
+        forward_uri: E,
         request: Request<Body>,
     ) -> Result<Response<Body>, ProxyError> {
-        call::<T>(client_ip, forward_uri, request, &self.client).await
+        call::<T>(
+            client_ip,
+            forward_uri.as_ref().to_owned(),
+            request,
+            &self.client,
+        )
+        .await
     }
 }
 
